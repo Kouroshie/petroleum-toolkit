@@ -2,7 +2,7 @@
 
 A free, browser-based calculator for the **critical and complex parameters petroleum engineers use every day** — PVT fluid properties, gas Z-factor, reservoir volumetrics, and decline-curve analysis. No install, no sign-up, no data leaves your device. Everything runs client-side in a single HTML file.
 
-**▶️ Live tool:** https://<your-username>.github.io/petroleum-toolkit/
+**▶️ Live tool:** https://kouroshie.github.io/petroleum-toolkit/
 
 ![screenshot](docs/screenshot.png)
 
@@ -23,10 +23,10 @@ Reservoir and production engineers constantly need quick, defensible estimates o
 
 ## How to use
 
-Just open the [live link](https://<your-username>.github.io/petroleum-toolkit/) — or clone and open `index.html` locally:
+Just open the [live link](https://kouroshie.github.io/petroleum-toolkit/) — or clone and open `index.html` locally:
 
 ```bash
-git clone https://github.com/<your-username>/petroleum-toolkit.git
+git clone https://github.com/kouroshie/petroleum-toolkit.git
 cd petroleum-toolkit
 # open index.html in any browser
 ```

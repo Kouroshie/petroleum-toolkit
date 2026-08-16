@@ -46,6 +46,8 @@
   .warn{border-left-color:var(--warn)}
   footer{text-align:center;padding:26px 20px;color:var(--muted);font-size:.82rem;border-top:1px solid var(--line);margin-top:30px}
   footer a{color:var(--accent2);text-decoration:none}
+  .chart-card{margin-top:20px}
+  canvas.chart{width:100%;height:320px;display:block;margin-top:8px;background:var(--panel2);border-radius:8px}
   .refs{font-size:.75rem;color:var(--muted);margin-top:14px}
   .refs code{background:var(--panel2);padding:1px 5px;border-radius:4px}
   .disclaimer{max-width:1000px;margin:0 auto;padding:0 20px}
@@ -88,6 +90,11 @@
         <div class="note">All correlations assume the reported R<sub>s</sub> is the solution gas–oil ratio at the bubble point. Above P<sub>b</sub> the oil is undersaturated and R<sub>s</sub> stays constant.</div>
       </div>
     </div>
+    <div class="card chart-card">
+      <h2>PVT vs Pressure</h2>
+      <div class="sub">Solution GOR R<sub>s</sub> and oil FVF B<sub>o</sub> from atmospheric to bubble point (Standing)</div>
+      <canvas id="oil_chart" class="chart"></canvas>
+    </div>
   </div>
 
   <!-- ============ GAS ============ -->
@@ -109,6 +116,11 @@
         </div>
         <div class="note warn">DAK is valid for 0.2 ≤ P<sub>pr</sub> ≤ 30 and 1.0 &lt; T<sub>pr</sub> ≤ 3.0. Results outside that range are flagged.</div>
       </div>
+    </div>
+    <div class="card chart-card">
+      <h2>Z-Factor vs Pressure</h2>
+      <div class="sub">Gas deviation factor across pressure at reservoir temperature; ● marks your input point</div>
+      <canvas id="gas_chart" class="chart"></canvas>
     </div>
   </div>
 
@@ -142,6 +154,11 @@
         <div class="note">STOIIP = 7758·A·h·φ·(1−S<sub>w</sub>)/B<sub>oi</sub> &nbsp;·&nbsp; OGIP = 43,560·A·h·φ·(1−S<sub>w</sub>)/B<sub>gi</sub></div>
       </div>
     </div>
+    <div class="card chart-card">
+      <h2>Volume Breakdown</h2>
+      <div class="sub">Bulk pore volume → hydrocarbon pore volume → in-place → recoverable</div>
+      <canvas id="vol_chart" class="chart"></canvas>
+    </div>
   </div>
 
   <!-- ============ DECLINE ============ -->
@@ -164,6 +181,11 @@
         </div>
         <div class="note">b = 0 → exponential; 0 &lt; b &lt; 1 → hyperbolic; b = 1 → harmonic. EUR is cumulative production down to the economic limit.</div>
       </div>
+    </div>
+    <div class="card chart-card">
+      <h2>Production Forecast</h2>
+      <div class="sub">Rate decline vs time to the economic limit; dashed line = abandonment rate</div>
+      <canvas id="dec_chart" class="chart"></canvas>
     </div>
   </div>
 
@@ -212,13 +234,97 @@ document.querySelectorAll('.tab').forEach(t=>{
     document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
     t.classList.add('active');
     document.getElementById(t.dataset.view).classList.add('active');
+    // redraw the chart now that the canvas has real dimensions
+    const redraw={oil:calcOil,gas:calcGas,vol:calcVol,decline:calcDecline}[t.dataset.view];
+    if(redraw) redraw();
   });
+});
+window.addEventListener('resize',()=>{
+  const active=document.querySelector('.view.active');
+  if(!active)return;
+  ({oil:calcOil,gas:calcGas,vol:calcVol,decline:calcDecline}[active.id]||(()=>{}))();
 });
 
 /* ---------- helpers ---------- */
 const num = id => parseFloat(document.getElementById(id).value);
 const row = (k,v,u='') => `<div class="res-row"><span class="k">${k}</span><span class="v">${v}<small>${u}</small></span></div>`;
 const fmt = (x,d=3) => (isFinite(x) ? Number(x).toLocaleString('en-US',{maximumFractionDigits:d,minimumFractionDigits:0}) : '—');
+
+/* ---------- lightweight Canvas plotting (no libraries) ---------- */
+function prep(canvas){
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth || 700, h = canvas.clientHeight || 320;
+  canvas.width = w*dpr; canvas.height = h*dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,w,h);
+  return {ctx,w,h};
+}
+function niceMax(v){ if(v<=0)return 1; const p=Math.pow(10,Math.floor(Math.log10(v))); const f=v/p; return (f<=1?1:f<=2?2:f<=5?5:10)*p; }
+function lineChart(canvasId, series, xlabel, ylabel, marker){
+  const canvas=document.getElementById(canvasId); if(!canvas)return;
+  const {ctx,w,h}=prep(canvas);
+  const padL=64,padR=64,padT=16,padB=46;
+  let xmin=Infinity,xmax=-Infinity,ymin=Infinity,ymax=-Infinity;
+  // primary axis from series[0]; optional secondary axis series[1]
+  series.forEach(s=>s.pts.forEach(([x,y])=>{if(x<xmin)xmin=x;if(x>xmax)xmax=x;}));
+  const y0=series[0].pts, y1=series[1]?series[1].pts:null;
+  y0.forEach(([,y])=>{if(y<ymin)ymin=y;if(y>ymax)ymax=y;});
+  let ymin2=Infinity,ymax2=-Infinity;
+  if(y1) y1.forEach(([,y])=>{if(y<ymin2)ymin2=y;if(y>ymax2)ymax2=y;});
+  ymin=Math.min(0,ymin); ymax=niceMax(ymax);
+  if(y1){ymin2=Math.min(0,ymin2); ymax2=niceMax(ymax2);}
+  const sx=x=>padL+(x-xmin)/((xmax-xmin)||1)*(w-padL-padR);
+  const sy=y=>h-padB-(y-ymin)/((ymax-ymin)||1)*(h-padT-padB);
+  const sy2=y=>h-padB-(y-ymin2)/((ymax2-ymin2)||1)*(h-padT-padB);
+  // grid + axes
+  ctx.strokeStyle='#2b3946'; ctx.fillStyle='#8b98a5'; ctx.font='11px Segoe UI'; ctx.lineWidth=1;
+  for(let i=0;i<=5;i++){
+    const gy=padT+i*(h-padT-padB)/5;
+    ctx.beginPath();ctx.moveTo(padL,gy);ctx.lineTo(w-padR,gy);ctx.stroke();
+    const val=ymax-(i*(ymax-ymin)/5);
+    ctx.textAlign='right';ctx.fillText(fmt(val,val>100?0:2),padL-8,gy+4);
+    if(y1){const v2=ymax2-(i*(ymax2-ymin2)/5);ctx.textAlign='left';ctx.fillStyle=series[1].color;ctx.fillText(fmt(v2,v2>100?0:2),w-padR+8,gy+4);ctx.fillStyle='#8b98a5';}
+  }
+  for(let i=0;i<=5;i++){
+    const gx=padL+i*(w-padL-padR)/5;
+    const val=xmin+(i*(xmax-xmin)/5);
+    ctx.textAlign='center';ctx.fillText(fmt(val,val>100?0:1),gx,h-padB+18);
+  }
+  // axis labels
+  ctx.fillStyle='#e6edf3';ctx.textAlign='center';
+  ctx.fillText(xlabel,(padL+w-padR)/2,h-8);
+  ctx.save();ctx.translate(16,(padT+h-padB)/2);ctx.rotate(-Math.PI/2);ctx.fillStyle=series[0].color;ctx.fillText(ylabel,0,0);ctx.restore();
+  if(y1){ctx.save();ctx.translate(w-14,(padT+h-padB)/2);ctx.rotate(-Math.PI/2);ctx.fillStyle=series[1].color;ctx.fillText(series[1].name,0,0);ctx.restore();}
+  // series
+  series.forEach((s,idx)=>{
+    const map=idx===1?sy2:sy;
+    ctx.strokeStyle=s.color;ctx.lineWidth=2.5;ctx.beginPath();
+    s.pts.forEach(([x,y],i)=>{const px=sx(x),py=map(y);i?ctx.lineTo(px,py):ctx.moveTo(px,py);});
+    ctx.stroke();
+  });
+  // marker point
+  if(marker){ctx.fillStyle='#f0f6fc';ctx.strokeStyle=marker.color||'#f0f6fc';ctx.lineWidth=2;
+    const px=sx(marker.x),py=sy(marker.y);ctx.beginPath();ctx.arc(px,py,5,0,2*Math.PI);ctx.fill();ctx.stroke();}
+}
+function barChart(canvasId, bars){
+  const canvas=document.getElementById(canvasId); if(!canvas)return;
+  const {ctx,w,h}=prep(canvas);
+  const padL=70,padR=20,padT=16,padB=54;
+  const vmax=niceMax(Math.max(...bars.map(b=>b.v)));
+  const n=bars.length, bw=(w-padL-padR)/n*0.6, gap=(w-padL-padR)/n;
+  ctx.strokeStyle='#2b3946';ctx.fillStyle='#8b98a5';ctx.font='11px Segoe UI';
+  for(let i=0;i<=4;i++){const gy=padT+i*(h-padT-padB)/4;ctx.beginPath();ctx.moveTo(padL,gy);ctx.lineTo(w-padR,gy);ctx.stroke();
+    ctx.textAlign='right';ctx.fillText(fmt(vmax-(i*vmax/4),2),padL-8,gy+4);}
+  bars.forEach((b,i)=>{
+    const x=padL+i*gap+(gap-bw)/2, bh=(b.v/vmax)*(h-padT-padB), y=h-padB-bh;
+    ctx.fillStyle=b.color;ctx.fillRect(x,y,bw,bh);
+    ctx.fillStyle='#e6edf3';ctx.textAlign='center';ctx.font='bold 12px Consolas';
+    ctx.fillText(fmt(b.v,2),x+bw/2,y-6);
+    ctx.font='11px Segoe UI';ctx.fillStyle='#8b98a5';
+    b.label.split('\n').forEach((ln,k)=>ctx.fillText(ln,x+bw/2,h-padB+18+k*14));
+  });
+}
 
 /* ---------- OIL PVT (Standing + Beggs-Robinson) ---------- */
 function calcOil(){
@@ -247,6 +353,19 @@ function calcOil(){
   html += row('Dead-oil viscosity μ<sub>od</sub>', fmt(muod,3), ' cp');
   html += row('Saturated-oil viscosity μ<sub>ob</sub>', fmt(muob,3), ' cp');
   document.getElementById('oil_out').innerHTML = html;
+
+  // chart: Rs(P) and Bo(P) from atmospheric to Pb (Standing forward correlation)
+  const rsPts=[], boPts=[];
+  const c = Math.pow(10, 0.0125*api - 0.00091*T);
+  for(let i=0;i<=40;i++){
+    const P = 100 + i*(Pb-100)/40;
+    const rsP = gg*Math.pow((P/18.2 + 1.4)*c, 1.2048);
+    const boP = 0.9759 + 0.00012*Math.pow(rsP*Math.sqrt(gg/go)+1.25*T, 1.2);
+    rsPts.push([P,rsP]); boPts.push([P,boP]);
+  }
+  lineChart('oil_chart',
+    [{name:'Rs (scf/STB)',color:'#39c16c',pts:rsPts},{name:'Bo (rb/STB)',color:'#388bfd',pts:boPts}],
+    'Pressure (psia)','Solution GOR  Rs');
 }
 
 /* ---------- GAS (Sutton + DAK + Lee) ---------- */
@@ -295,6 +414,13 @@ function calcGas(){
     html += `<div class="note warn">⚠ T<sub>pr</sub>=${fmt(Tpr,2)}, P<sub>pr</sub>=${fmt(Ppr,2)} is outside the validated DAK range — treat Z with caution.</div>`;
   }
   document.getElementById('gas_out').innerHTML = html;
+
+  // chart: Z-factor vs pressure at reservoir temperature
+  const zPts=[]; const Pmax=Math.max(6000, P*1.4);
+  for(let i=1;i<=60;i++){ const Pi=i*Pmax/60; zPts.push([Pi, zDAK(Pi/Ppc, Tpr)]); }
+  lineChart('gas_chart',
+    [{name:'Z-factor',color:'#39c16c',pts:zPts}],
+    'Pressure (psia)','Z-factor', {x:P,y:Z,color:'#d29922'});
 }
 
 /* ---------- VOLUMETRICS ---------- */
@@ -322,9 +448,18 @@ function calcVol(){
     if(rf>0) html += row('Recoverable @ RF='+fmt(rf*100,0)+'%', fmt(G*rf/1e9,3), ' Bscf');
   }
   const pv = 7758*A*h*phi;                            // bbl
+  const hcpv = pv*(1-sw);
   html += row('Bulk pore volume', fmt(pv/1e6,2), ' MMbbl');
-  html += row('Hydrocarbon pore volume', fmt(pv*(1-sw)/1e6,2), ' MMbbl');
+  html += row('Hydrocarbon pore volume', fmt(hcpv/1e6,2), ' MMbbl');
   document.getElementById('vol_out').innerHTML = html;
+
+  // chart: reservoir-volume waterfall (consistent MMbbl reservoir)
+  const bars=[
+    {label:'Bulk\nPore Vol',v:pv/1e6,color:'#2b6cb0'},
+    {label:'Hydrocarbon\nPore Vol',v:hcpv/1e6,color:'#388bfd'},
+  ];
+  if(rf>0) bars.push({label:'Recoverable\nHCPV',v:hcpv*rf/1e6,color:'#39c16c'});
+  barChart('vol_chart', bars);
 }
 
 /* ---------- DECLINE (Arps) ---------- */
@@ -346,7 +481,6 @@ function calcDecline(){
     t = (Math.pow(qi/qab,b) - 1)/(b*Di);
     Np = (Math.pow(qi,b)/((1-b)*Di))*(Math.pow(qi,1-b)-Math.pow(qab,1-b))*365.25;
   }
-  const q1 = qi*declineRate(1,qi,Di,b);              // rate after 1 yr (fraction of qi)
   let html = row('Decline model', type);
   html += row('Rate after 1 year', fmt(qi*qFrac(1,Di,b),0), ' STB/day');
   html += row('Rate after 5 years', fmt(qi*qFrac(5,Di,b),0), ' STB/day');
@@ -354,15 +488,27 @@ function calcDecline(){
   html += row('EUR (cum. to limit)', fmt(Np/1e6,3), ' MMSTB');
   html += row('EUR (cum. to limit)', fmt(Np,0), ' STB');
   document.getElementById('dec_out').innerHTML = html;
+
+  // chart: rate vs time to economic limit
+  const qPts=[]; const tEnd=Math.max(t,0.5);
+  for(let i=0;i<=60;i++){ const ti=i*tEnd/60; qPts.push([ti, qi*qFrac(ti,Di,b)]); }
+  lineChart('dec_chart',
+    [{name:'Rate',color:'#39c16c',pts:qPts}],
+    'Time (years)','Oil rate (STB/day)');
+  // abandonment line
+  const cv=document.getElementById('dec_chart'); if(cv){const ctx=cv.getContext('2d');
+    const w=cv.clientWidth,h=cv.clientHeight,padL=64,padR=64,padB=46,padT=16;
+    const ymax=niceMax(qi); const y=h-padB-(qab/ymax)*(h-padT-padB);
+    ctx.strokeStyle='#d29922';ctx.setLineDash([6,4]);ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(padL,y);ctx.lineTo(w-padR,y);ctx.stroke();ctx.setLineDash([]);}
 }
 function qFrac(t,Di,b){                               // q(t)/qi
   if(b===0) return Math.exp(-Di*t);
   return Math.pow(1+b*Di*t, -1/b);
 }
-function declineRate(){return 1;}                     // placeholder kept for clarity
 
 /* init */
-document.getElementById('repoLink').href = 'https://github.com/';
+document.getElementById('repoLink').href = 'https://github.com/Kouroshie/petroleum-toolkit';
 calcOil(); calcGas(); calcVol(); calcDecline();
 </script>
 </body>
