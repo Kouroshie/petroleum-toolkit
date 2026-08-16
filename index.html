@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Petroleum Engineering Toolkit — PVT &amp; Reservoir Parameters</title>
+<title>Petroleum Engineering Toolkit · PVT &amp; Reservoir Parameters</title>
 <meta name="description" content="Free browser-based calculator for critical petroleum-engineering parameters: PVT fluid properties, gas Z-factor, reservoir volumetrics (OOIP/OGIP) and Arps decline-curve analysis." />
 <style>
   :root{
@@ -56,7 +56,7 @@
 <body>
 <header>
   <h1>Petroleum Engineering <span>Toolkit</span></h1>
-  <p>Fast, transparent estimates of the critical &amp; complex parameters petroleum engineers use every day —
+  <p>Fast, transparent estimates of the critical &amp; complex parameters petroleum engineers use every day:
      PVT fluid properties, gas Z-factor, reservoir volumetrics, and decline-curve analysis. Runs entirely in your browser; nothing is uploaded.</p>
 </header>
 
@@ -195,18 +195,18 @@
       <h2>About this toolkit</h2>
       <div class="sub">Transparent, reproducible reservoir-engineering estimates</div>
       <p style="color:var(--muted);font-size:.92rem">
-        Every value here comes from a published, peer-accepted correlation — not a black box. These are screening-level estimates
+        Every value here comes from a published, peer-accepted correlation, not a black box. These are screening-level estimates
         meant to speed up hand calculations, sanity-check simulator output, and teach the underlying physics. For reserves booking or
         field-development decisions, always calibrate to lab PVT and pressure/production history.
       </p>
       <div class="refs">
         <b style="color:var(--text)">Correlations &amp; references</b><br><br>
-        • <code>Standing, M.B. (1947)</code> — Bubble-point pressure, solution GOR, oil FVF.<br>
-        • <code>Sutton, R.P. (1985)</code> — Gas pseudo-critical properties from specific gravity.<br>
-        • <code>Dranchuk &amp; Abou-Kassem (1975)</code> — Gas compressibility factor Z (11-constant EOS fit to Standing–Katz).<br>
-        • <code>Beggs &amp; Robinson (1975)</code> — Dead- &amp; saturated-oil viscosity.<br>
-        • <code>Lee, González &amp; Eakin (1966)</code> — Gas viscosity.<br>
-        • <code>Arps, J.J. (1945)</code> — Decline-curve analysis.<br>
+        • <code>Standing, M.B. (1947)</code>: Bubble-point pressure, solution GOR, oil FVF.<br>
+        • <code>Sutton, R.P. (1985)</code>: Gas pseudo-critical properties from specific gravity.<br>
+        • <code>Dranchuk &amp; Abou-Kassem (1975)</code>: Gas compressibility factor Z (11-constant EOS fit to Standing–Katz).<br>
+        • <code>Beggs &amp; Robinson (1975)</code>: Dead- &amp; saturated-oil viscosity.<br>
+        • <code>Lee, González &amp; Eakin (1966)</code>: Gas viscosity.<br>
+        • <code>Arps, J.J. (1945)</code>: Decline-curve analysis.<br>
       </div>
       <div class="note warn" style="margin-top:18px">
         <b>Disclaimer:</b> Provided for educational and screening purposes only, with no warranty. The author accepts no liability
@@ -218,7 +218,7 @@
 
 <footer>
   Built by <b>Seyed Kourosh Mahjour, Ph.D.</b> · Petroleum &amp; Reservoir Engineering<br>
-  Open source (MIT) — contributions welcome ·
+  Open source (MIT) · contributions welcome ·
   <a href="#" id="repoLink">View on GitHub</a>
 </footer>
 
@@ -411,7 +411,7 @@ function calcGas(){
   html += row('Gas density', fmt(rhog,3), ' lb/ft³');
   html += row('Gas viscosity μ<sub>g</sub> (Lee)', fmt(mug,4), ' cp');
   if(Tpr<=1.0||Tpr>3.0||Ppr<0.2||Ppr>30){
-    html += `<div class="note warn">⚠ T<sub>pr</sub>=${fmt(Tpr,2)}, P<sub>pr</sub>=${fmt(Ppr,2)} is outside the validated DAK range — treat Z with caution.</div>`;
+    html += `<div class="note warn">⚠ T<sub>pr</sub>=${fmt(Tpr,2)}, P<sub>pr</sub>=${fmt(Ppr,2)} is outside the validated DAK range; treat Z with caution.</div>`;
   }
   document.getElementById('gas_out').innerHTML = html;
 

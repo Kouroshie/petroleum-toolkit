@@ -1,16 +1,18 @@
 # 🛢️ Petroleum Engineering Toolkit
 
-A free, browser-based calculator for the **critical and complex parameters petroleum engineers use every day** — PVT fluid properties, gas Z-factor, reservoir volumetrics, and decline-curve analysis. No install, no sign-up, no data leaves your device. Everything runs client-side in a single HTML file.
+A free, browser-based calculator for the **critical and complex parameters petroleum engineers use every day**: PVT fluid properties, gas Z-factor, reservoir volumetrics, and decline-curve analysis. No install, no sign-up, no data leaves your device. Everything runs client-side in a single HTML file.
 
 ### ▶️ Live tool: **https://kouroshie.github.io/petroleum-toolkit/**
 
-Four modules — Oil PVT, Gas Properties, Volumetrics, and Decline Curve — each with an interactive chart (Rs & Bₒ vs pressure, Z-factor vs pressure, production forecast, and a reservoir-volume breakdown).
+Four modules (Oil PVT, Gas Properties, Volumetrics, and Decline Curve), each with an interactive chart: Rs & Bₒ vs pressure, Z-factor vs pressure, production forecast, and a reservoir-volume breakdown.
+
+![Petroleum Engineering Toolkit screenshot](docs/screenshot.png)
 
 ---
 
 ## Why this exists
 
-Reservoir and production engineers constantly need quick, defensible estimates of fluid and reservoir properties — to sanity-check a simulator, teach a concept, or make a screening decision before the lab PVT report arrives. This toolkit puts the industry-standard correlations in one clean interface, with every formula and reference stated openly so you can trust (and audit) the numbers.
+Reservoir and production engineers constantly need quick, defensible estimates of fluid and reservoir properties, whether to sanity-check a simulator, teach a concept, or make a screening decision before the lab PVT report arrives. This toolkit puts the industry-standard correlations in one clean interface, with every formula and reference stated openly so you can trust (and audit) the numbers.
 
 ## What it calculates
 
@@ -19,11 +21,11 @@ Reservoir and production engineers constantly need quick, defensible estimates o
 | **Oil PVT** | Bubble-point pressure, oil FVF (Bₒ), oil density, dead- & saturated-oil viscosity | Standing (1947), Beggs–Robinson (1975) |
 | **Gas Properties** | Pseudo-criticals, Z-factor, gas FVF (Bg), gas density, gas viscosity | Sutton (1985), Dranchuk–Abou-Kassem (1975), Lee et al. (1966) |
 | **Volumetrics** | STOIIP / OGIP, pore & hydrocarbon pore volume, recoverable reserves | Volumetric method |
-| **Decline Curve** | Rate forecast, time to economic limit, EUR | Arps (1945) — exponential / hyperbolic / harmonic |
+| **Decline Curve** | Rate forecast, time to economic limit, EUR | Arps (1945): exponential / hyperbolic / harmonic |
 
 ## How to use
 
-Just open the [live link](https://kouroshie.github.io/petroleum-toolkit/) — or clone and open `index.html` locally:
+Just open the [live link](https://kouroshie.github.io/petroleum-toolkit/), or clone and open `index.html` locally:
 
 ```bash
 git clone https://github.com/kouroshie/petroleum-toolkit.git
@@ -35,7 +37,7 @@ No build step, no dependencies.
 
 ## Validation
 
-The correlations are verified against published reference values — e.g. the Dranchuk–Abou-Kassem Z-factor reproduces the Standing–Katz chart to within chart-reading accuracy across the validated range (0.2 ≤ P_pr ≤ 30, 1.0 < T_pr ≤ 3.0). Results outside a correlation's valid range are flagged in the UI.
+The correlations are verified against published reference values. For example, the Dranchuk–Abou-Kassem Z-factor reproduces the Standing–Katz chart to within chart-reading accuracy across the validated range (0.2 ≤ P_pr ≤ 30, 1.0 < T_pr ≤ 3.0). Results outside a correlation's valid range are flagged in the UI.
 
 ## ⚠️ Disclaimer
 
@@ -52,4 +54,4 @@ These are **screening-level estimates** from published correlations, provided fo
 
 ## License
 
-MIT © Seyed Kourosh Mahjour, Ph.D. — see [LICENSE](LICENSE). Contributions welcome via pull request.
+MIT © Seyed Kourosh Mahjour, Ph.D. See [LICENSE](LICENSE). Contributions welcome via pull request.
