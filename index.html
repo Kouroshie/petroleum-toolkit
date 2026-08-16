@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Petroleum Engineering Toolkit — PVT &amp; Reservoir Parameters</title>
+<meta name="description" content="Free browser-based calculator for critical petroleum-engineering parameters: PVT fluid properties, gas Z-factor, reservoir volumetrics (OOIP/OGIP) and Arps decline-curve analysis." />
+<style>
+  :root{
+    --bg:#0f1419; --panel:#171e26; --panel2:#1e2831; --line:#2b3946;
+    --text:#e6edf3; --muted:#8b98a5; --accent:#2ea043; --accent2:#39c16c;
+    --blue:#388bfd; --warn:#d29922; --radius:12px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Segoe UI',system-ui,Arial,sans-serif;background:var(--bg);color:var(--text);line-height:1.5}
+  header{padding:28px 20px 18px;text-align:center;background:linear-gradient(180deg,#12303a,#0f1419);border-bottom:1px solid var(--line)}
+  header h1{margin:0;font-size:1.55rem;letter-spacing:.3px}
+  header h1 span{color:var(--accent2)}
+  header p{margin:8px auto 0;max-width:720px;color:var(--muted);font-size:.95rem}
+  .wrap{max-width:1000px;margin:0 auto;padding:20px}
+  .tabs{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0}
+  .tab{padding:10px 16px;background:var(--panel);border:1px solid var(--line);border-radius:999px;cursor:pointer;font-size:.9rem;color:var(--muted);transition:.15s}
+  .tab:hover{color:var(--text)}
+  .tab.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  .view{display:none}
+  .view.active{display:block}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  @media(max-width:760px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px}
+  .card h2{margin:0 0 4px;font-size:1.1rem}
+  .card .sub{color:var(--muted);font-size:.82rem;margin-bottom:16px}
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:.82rem;color:var(--muted);margin-bottom:5px}
+  .field label b{color:var(--text);font-weight:600}
+  .field input,.field select{width:100%;padding:9px 11px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;color:var(--text);font-size:.95rem}
+  .field input:focus,.field select:focus{outline:none;border-color:var(--accent)}
+  .btn{width:100%;padding:11px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:.95rem;font-weight:600;cursor:pointer;margin-top:4px}
+  .btn:hover{background:var(--accent2)}
+  .results{margin-top:6px}
+  .res-row{display:flex;justify-content:space-between;align-items:baseline;padding:9px 0;border-bottom:1px solid var(--line)}
+  .res-row:last-child{border-bottom:none}
+  .res-row .k{color:var(--muted);font-size:.86rem}
+  .res-row .v{font-family:'Consolas',monospace;font-size:1.02rem;font-weight:600;color:var(--accent2)}
+  .res-row .v small{color:var(--muted);font-weight:400;font-size:.75rem;margin-left:3px}
+  .note{background:var(--panel2);border-left:3px solid var(--blue);padding:10px 12px;border-radius:6px;font-size:.8rem;color:var(--muted);margin-top:14px}
+  .warn{border-left-color:var(--warn)}
+  footer{text-align:center;padding:26px 20px;color:var(--muted);font-size:.82rem;border-top:1px solid var(--line);margin-top:30px}
+  footer a{color:var(--accent2);text-decoration:none}
+  .refs{font-size:.75rem;color:var(--muted);margin-top:14px}
+  .refs code{background:var(--panel2);padding:1px 5px;border-radius:4px}
+  .disclaimer{max-width:1000px;margin:0 auto;padding:0 20px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Petroleum Engineering <span>Toolkit</span></h1>
+  <p>Fast, transparent estimates of the critical &amp; complex parameters petroleum engineers use every day —
+     PVT fluid properties, gas Z-factor, reservoir volumetrics, and decline-curve analysis. Runs entirely in your browser; nothing is uploaded.</p>
+</header>
+
+<div class="wrap">
+  <div class="tabs">
+    <div class="tab active" data-view="oil">Oil PVT</div>
+    <div class="tab" data-view="gas">Gas Properties</div>
+    <div class="tab" data-view="vol">Volumetrics (OOIP / OGIP)</div>
+    <div class="tab" data-view="decline">Decline Curve</div>
+    <div class="tab" data-view="about">About</div>
+  </div>
+
+  <!-- ============ OIL PVT ============ -->
+  <div class="view active" id="oil">
+    <div class="grid">
+      <div class="card">
+        <h2>Black-Oil PVT Inputs</h2>
+        <div class="sub">Standing (1947) &amp; Beggs–Robinson (1975) correlations</div>
+        <div class="field"><label><b>API gravity</b> of stock-tank oil (°API)</label><input id="o_api" type="number" step="0.1" value="35"></div>
+        <div class="field"><label><b>Gas specific gravity</b> γ<sub>g</sub> (air = 1)</label><input id="o_gg" type="number" step="0.01" value="0.75"></div>
+        <div class="field"><label><b>Reservoir temperature</b> (°F)</label><input id="o_t" type="number" step="1" value="200"></div>
+        <div class="field"><label><b>Solution GOR</b> R<sub>s</sub> at bubble point (scf/STB)</label><input id="o_rs" type="number" step="10" value="650"></div>
+        <button class="btn" onclick="calcOil()">Calculate</button>
+      </div>
+      <div class="card">
+        <h2>Results</h2>
+        <div class="sub">Properties at the bubble point</div>
+        <div class="results" id="oil_out">
+          <div class="res-row"><span class="k">Press Calculate to compute</span><span class="v">—</span></div>
+        </div>
+        <div class="note">All correlations assume the reported R<sub>s</sub> is the solution gas–oil ratio at the bubble point. Above P<sub>b</sub> the oil is undersaturated and R<sub>s</sub> stays constant.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ GAS ============ -->
+  <div class="view" id="gas">
+    <div class="grid">
+      <div class="card">
+        <h2>Real-Gas Inputs</h2>
+        <div class="sub">Sutton pseudo-criticals + Dranchuk–Abou-Kassem Z + Lee et al. viscosity</div>
+        <div class="field"><label><b>Gas specific gravity</b> γ<sub>g</sub> (air = 1)</label><input id="g_gg" type="number" step="0.01" value="0.70"></div>
+        <div class="field"><label><b>Reservoir temperature</b> (°F)</label><input id="g_t" type="number" step="1" value="180"></div>
+        <div class="field"><label><b>Reservoir pressure</b> (psia)</label><input id="g_p" type="number" step="50" value="3500"></div>
+        <button class="btn" onclick="calcGas()">Calculate</button>
+      </div>
+      <div class="card">
+        <h2>Results</h2>
+        <div class="sub">Compressibility, volume factor &amp; transport properties</div>
+        <div class="results" id="gas_out">
+          <div class="res-row"><span class="k">Press Calculate to compute</span><span class="v">—</span></div>
+        </div>
+        <div class="note warn">DAK is valid for 0.2 ≤ P<sub>pr</sub> ≤ 30 and 1.0 &lt; T<sub>pr</sub> ≤ 3.0. Results outside that range are flagged.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ VOLUMETRICS ============ -->
+  <div class="view" id="vol">
+    <div class="grid">
+      <div class="card">
+        <h2>Volumetric Inputs</h2>
+        <div class="sub">Original oil/gas in place from reservoir geometry</div>
+        <div class="field"><label><b>Fluid type</b></label>
+          <select id="v_type" onchange="toggleVol()">
+            <option value="oil">Oil (STOIIP)</option>
+            <option value="gas">Gas (OGIP)</option>
+          </select>
+        </div>
+        <div class="field"><label><b>Drainage area</b> A (acres)</label><input id="v_a" type="number" step="1" value="640"></div>
+        <div class="field"><label><b>Net pay thickness</b> h (ft)</label><input id="v_h" type="number" step="1" value="45"></div>
+        <div class="field"><label><b>Porosity</b> φ (fraction)</label><input id="v_phi" type="number" step="0.01" value="0.18"></div>
+        <div class="field"><label><b>Water saturation</b> S<sub>w</sub> (fraction)</label><input id="v_sw" type="number" step="0.01" value="0.30"></div>
+        <div class="field" id="v_boi_wrap"><label><b>Oil FVF</b> B<sub>oi</sub> (rb/STB)</label><input id="v_boi" type="number" step="0.01" value="1.28"></div>
+        <div class="field" id="v_bgi_wrap" style="display:none"><label><b>Gas FVF</b> B<sub>gi</sub> (rb/Mscf)</label><input id="v_bgi" type="number" step="0.1" value="0.85"></div>
+        <div class="field"><label><b>Recovery factor</b> RF (fraction, optional)</label><input id="v_rf" type="number" step="0.01" value="0.35"></div>
+        <button class="btn" onclick="calcVol()">Calculate</button>
+      </div>
+      <div class="card">
+        <h2>Results</h2>
+        <div class="sub">In-place volumes &amp; recoverable reserves</div>
+        <div class="results" id="vol_out">
+          <div class="res-row"><span class="k">Press Calculate to compute</span><span class="v">—</span></div>
+        </div>
+        <div class="note">STOIIP = 7758·A·h·φ·(1−S<sub>w</sub>)/B<sub>oi</sub> &nbsp;·&nbsp; OGIP = 43,560·A·h·φ·(1−S<sub>w</sub>)/B<sub>gi</sub></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ DECLINE ============ -->
+  <div class="view" id="decline">
+    <div class="grid">
+      <div class="card">
+        <h2>Arps Decline Inputs</h2>
+        <div class="sub">Exponential, hyperbolic &amp; harmonic decline</div>
+        <div class="field"><label><b>Initial rate</b> q<sub>i</sub> (STB/day)</label><input id="d_qi" type="number" step="10" value="800"></div>
+        <div class="field"><label><b>Initial decline rate</b> D<sub>i</sub> (nominal, per year)</label><input id="d_di" type="number" step="0.01" value="0.25"></div>
+        <div class="field"><label><b>Decline exponent</b> b (0 = exp, 1 = harmonic)</label><input id="d_b" type="number" step="0.05" value="0.5"></div>
+        <div class="field"><label><b>Economic limit rate</b> q<sub>ab</sub> (STB/day)</label><input id="d_qab" type="number" step="1" value="20"></div>
+        <button class="btn" onclick="calcDecline()">Calculate</button>
+      </div>
+      <div class="card">
+        <h2>Results</h2>
+        <div class="sub">Rate forecast &amp; Estimated Ultimate Recovery</div>
+        <div class="results" id="dec_out">
+          <div class="res-row"><span class="k">Press Calculate to compute</span><span class="v">—</span></div>
+        </div>
+        <div class="note">b = 0 → exponential; 0 &lt; b &lt; 1 → hyperbolic; b = 1 → harmonic. EUR is cumulative production down to the economic limit.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ ABOUT ============ -->
+  <div class="view" id="about">
+    <div class="card">
+      <h2>About this toolkit</h2>
+      <div class="sub">Transparent, reproducible reservoir-engineering estimates</div>
+      <p style="color:var(--muted);font-size:.92rem">
+        Every value here comes from a published, peer-accepted correlation — not a black box. These are screening-level estimates
+        meant to speed up hand calculations, sanity-check simulator output, and teach the underlying physics. For reserves booking or
+        field-development decisions, always calibrate to lab PVT and pressure/production history.
+      </p>
+      <div class="refs">
+        <b style="color:var(--text)">Correlations &amp; references</b><br><br>
+        • <code>Standing, M.B. (1947)</code> — Bubble-point pressure, solution GOR, oil FVF.<br>
+        • <code>Sutton, R.P. (1985)</code> — Gas pseudo-critical properties from specific gravity.<br>
+        • <code>Dranchuk &amp; Abou-Kassem (1975)</code> — Gas compressibility factor Z (11-constant EOS fit to Standing–Katz).<br>
+        • <code>Beggs &amp; Robinson (1975)</code> — Dead- &amp; saturated-oil viscosity.<br>
+        • <code>Lee, González &amp; Eakin (1966)</code> — Gas viscosity.<br>
+        • <code>Arps, J.J. (1945)</code> — Decline-curve analysis.<br>
+      </div>
+      <div class="note warn" style="margin-top:18px">
+        <b>Disclaimer:</b> Provided for educational and screening purposes only, with no warranty. The author accepts no liability
+        for decisions made using these estimates. Verify against measured data before any engineering or financial commitment.
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  Built by <b>Seyed Kourosh Mahjour, Ph.D.</b> · Petroleum &amp; Reservoir Engineering<br>
+  Open source (MIT) — contributions welcome ·
+  <a href="#" id="repoLink">View on GitHub</a>
+</footer>
+
+<div class="disclaimer" style="text-align:center;color:var(--muted);font-size:.72rem;padding-bottom:24px">
+  Screening-level estimates from published correlations. Not a substitute for lab-measured PVT or calibrated simulation.
+</div>
+
+<script>
+/* ---------- tab switching ---------- */
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click',()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById(t.dataset.view).classList.add('active');
+  });
+});
+
+/* ---------- helpers ---------- */
+const num = id => parseFloat(document.getElementById(id).value);
+const row = (k,v,u='') => `<div class="res-row"><span class="k">${k}</span><span class="v">${v}<small>${u}</small></span></div>`;
+const fmt = (x,d=3) => (isFinite(x) ? Number(x).toLocaleString('en-US',{maximumFractionDigits:d,minimumFractionDigits:0}) : '—');
+
+/* ---------- OIL PVT (Standing + Beggs-Robinson) ---------- */
+function calcOil(){
+  const api=num('o_api'), gg=num('o_gg'), T=num('o_t'), Rs=num('o_rs');
+  const go = 141.5/(131.5+api);                    // oil specific gravity
+  // Standing bubble-point pressure
+  const a = 0.00091*T - 0.0125*api;
+  const Pb = 18.2*(Math.pow(Rs/gg,0.83)*Math.pow(10,a) - 1.4);
+  // Standing oil FVF at Pb
+  const Bo = 0.9759 + 0.00012*Math.pow(Rs*Math.sqrt(gg/go) + 1.25*T, 1.2);
+  // Oil density (mass balance)
+  const rho = (62.4*go + 0.0136*Rs*gg)/Bo;         // lb/ft3
+  // Beggs-Robinson viscosity
+  const Z = 3.0324 - 0.02023*api;
+  const Yd = Math.pow(10,Z);
+  const X = Yd*Math.pow(T,-1.163);
+  const muod = Math.pow(10,X) - 1;                  // dead oil, cp
+  const aa = 10.715*Math.pow(Rs+100,-0.515);
+  const bb = 5.44*Math.pow(Rs+150,-0.338);
+  const muob = aa*Math.pow(muod,bb);                // saturated, cp
+
+  let html = row('Oil specific gravity γ<sub>o</sub>', fmt(go,4));
+  html += row('Bubble-point pressure P<sub>b</sub>', fmt(Pb,0), ' psia');
+  html += row('Oil FVF B<sub>o</sub> @ P<sub>b</sub>', fmt(Bo,3), ' rb/STB');
+  html += row('Oil density @ P<sub>b</sub>', fmt(rho,1), ' lb/ft³');
+  html += row('Dead-oil viscosity μ<sub>od</sub>', fmt(muod,3), ' cp');
+  html += row('Saturated-oil viscosity μ<sub>ob</sub>', fmt(muob,3), ' cp');
+  document.getElementById('oil_out').innerHTML = html;
+}
+
+/* ---------- GAS (Sutton + DAK + Lee) ---------- */
+function zDAK(Ppr,Tpr){
+  const A=[0.3265,-1.0700,-0.5339,0.01569,-0.05165,0.5475,-0.7361,0.1844,0.1056,0.6134,0.7210];
+  const c1=A[0]+A[1]/Tpr+A[2]/Math.pow(Tpr,3)+A[3]/Math.pow(Tpr,4)+A[4]/Math.pow(Tpr,5);
+  const c2=A[5]+A[6]/Tpr+A[7]/(Tpr*Tpr);
+  const c3=A[8]*(A[6]/Tpr+A[7]/(Tpr*Tpr));
+  let rr=0.27*Ppr/Tpr, Z=1;                         // initial guess
+  for(let i=0;i<50;i++){
+    rr = 0.27*Ppr/(Z*Tpr);
+    const t=A[9]*(1+A[10]*rr*rr)*(rr*rr/Math.pow(Tpr,3))*Math.exp(-A[10]*rr*rr);
+    const Znew = 1 + c1*rr + c2*rr*rr - c3*Math.pow(rr,5) + t;
+    if(Math.abs(Znew-Z)<1e-8){Z=Znew;break;}
+    Z=Znew;
+  }
+  return Z;
+}
+function calcGas(){
+  const gg=num('g_gg'), Tf=num('g_t'), P=num('g_p');
+  const T=Tf+459.67;                                // °R
+  const Tpc=169.2+349.5*gg-74.0*gg*gg;             // Sutton, °R
+  const Ppc=756.8-131.0*gg-3.6*gg*gg;             // Sutton, psia
+  const Tpr=T/Tpc, Ppr=P/Ppc;
+  const Z=zDAK(Ppr,Tpr);
+  const Bg=0.02827*Z*T/P;                           // ft3/scf
+  const Bg_bbl=0.005035*Z*T/P;                      // rb/scf
+  const M=28.97*gg;                                 // molecular weight
+  const rhog=P*M/(Z*10.732*T);                      // lb/ft3
+  // Lee et al. viscosity
+  const K=((9.4+0.02*M)*Math.pow(T,1.5))/(209+19*M+T);
+  const Xv=3.5+986/T+0.01*M;
+  const Yv=2.4-0.2*Xv;
+  const rhogcc=rhog*0.0160185;                      // g/cc
+  const mug=1e-4*K*Math.exp(Xv*Math.pow(rhogcc,Yv));// cp
+
+  let html = row('Pseudo-critical T<sub>pc</sub>', fmt(Tpc,1), ' °R');
+  html += row('Pseudo-critical P<sub>pc</sub>', fmt(Ppc,1), ' psia');
+  html += row('Reduced T<sub>pr</sub> / P<sub>pr</sub>', fmt(Tpr,2)+' / '+fmt(Ppr,2));
+  html += row('Z-factor (DAK)', fmt(Z,4));
+  html += row('Gas FVF B<sub>g</sub>', fmt(Bg,5), ' ft³/scf');
+  html += row('Gas FVF B<sub>g</sub>', fmt(Bg_bbl*1000,4), ' rb/Mscf');
+  html += row('Gas density', fmt(rhog,3), ' lb/ft³');
+  html += row('Gas viscosity μ<sub>g</sub> (Lee)', fmt(mug,4), ' cp');
+  if(Tpr<=1.0||Tpr>3.0||Ppr<0.2||Ppr>30){
+    html += `<div class="note warn">⚠ T<sub>pr</sub>=${fmt(Tpr,2)}, P<sub>pr</sub>=${fmt(Ppr,2)} is outside the validated DAK range — treat Z with caution.</div>`;
+  }
+  document.getElementById('gas_out').innerHTML = html;
+}
+
+/* ---------- VOLUMETRICS ---------- */
+function toggleVol(){
+  const oil = document.getElementById('v_type').value==='oil';
+  document.getElementById('v_boi_wrap').style.display = oil?'block':'none';
+  document.getElementById('v_bgi_wrap').style.display = oil?'none':'block';
+}
+function calcVol(){
+  const type=document.getElementById('v_type').value;
+  const A=num('v_a'), h=num('v_h'), phi=num('v_phi'), sw=num('v_sw'), rf=num('v_rf');
+  let html='';
+  if(type==='oil'){
+    const boi=num('v_boi');
+    const N = 7758*A*h*phi*(1-sw)/boi;              // STB
+    html += row('STOIIP (N)', fmt(N,0), ' STB');
+    html += row('STOIIP (N)', fmt(N/1e6,3), ' MMSTB');
+    if(rf>0) html += row('Recoverable @ RF='+fmt(rf*100,0)+'%', fmt(N*rf/1e6,3), ' MMSTB');
+  }else{
+    const bgi=num('v_bgi');                          // rb/Mscf
+    const bgi_ft3=bgi*5.615/1000;                    // ft3/scf
+    const G = 43560*A*h*phi*(1-sw)/bgi_ft3;          // scf
+    html += row('OGIP (G)', fmt(G/1e9,3), ' Bscf');
+    html += row('OGIP (G)', fmt(G/1e6,0), ' Mscf');
+    if(rf>0) html += row('Recoverable @ RF='+fmt(rf*100,0)+'%', fmt(G*rf/1e9,3), ' Bscf');
+  }
+  const pv = 7758*A*h*phi;                            // bbl
+  html += row('Bulk pore volume', fmt(pv/1e6,2), ' MMbbl');
+  html += row('Hydrocarbon pore volume', fmt(pv*(1-sw)/1e6,2), ' MMbbl');
+  document.getElementById('vol_out').innerHTML = html;
+}
+
+/* ---------- DECLINE (Arps) ---------- */
+function calcDecline(){
+  const qi=num('d_qi'), Di=num('d_di'), b=num('d_b'), qab=num('d_qab');
+  // time to economic limit (years) & cumulative to that point
+  let t, Np, type;
+  const qi_yr = qi*365.25;                            // annualize for Np in STB
+  if(b===0){                                          // exponential
+    type='Exponential';
+    t = Math.log(qi/qab)/Di;
+    Np = (qi_yr - qab*365.25)/Di;
+  }else if(b===1){                                    // harmonic
+    type='Harmonic';
+    t = (qi/qab - 1)/Di;
+    Np = (qi_yr/Di)*Math.log(qi/qab);
+  }else{                                              // hyperbolic
+    type='Hyperbolic (b='+b+')';
+    t = (Math.pow(qi/qab,b) - 1)/(b*Di);
+    Np = (Math.pow(qi,b)/((1-b)*Di))*(Math.pow(qi,1-b)-Math.pow(qab,1-b))*365.25;
+  }
+  const q1 = qi*declineRate(1,qi,Di,b);              // rate after 1 yr (fraction of qi)
+  let html = row('Decline model', type);
+  html += row('Rate after 1 year', fmt(qi*qFrac(1,Di,b),0), ' STB/day');
+  html += row('Rate after 5 years', fmt(qi*qFrac(5,Di,b),0), ' STB/day');
+  html += row('Time to economic limit', fmt(t,1), ' years');
+  html += row('EUR (cum. to limit)', fmt(Np/1e6,3), ' MMSTB');
+  html += row('EUR (cum. to limit)', fmt(Np,0), ' STB');
+  document.getElementById('dec_out').innerHTML = html;
+}
+function qFrac(t,Di,b){                               // q(t)/qi
+  if(b===0) return Math.exp(-Di*t);
+  return Math.pow(1+b*Di*t, -1/b);
+}
+function declineRate(){return 1;}                     // placeholder kept for clarity
+
+/* init */
+document.getElementById('repoLink').href = 'https://github.com/';
+calcOil(); calcGas(); calcVol(); calcDecline();
+</script>
+</body>
+</html>
