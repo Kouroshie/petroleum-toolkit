@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  html,body{margin:0;padding:0}
+  .avatar{
+    width:640px;height:640px;position:relative;overflow:hidden;
+    background:
+      radial-gradient(circle at 30% 25%, rgba(120,170,255,0.55), rgba(120,170,255,0) 55%),
+      linear-gradient(135deg, #0a2a66 0%, #123f9e 45%, #1d64e6 100%);
+    font-family:'Segoe UI Semibold','Segoe UI',Arial,sans-serif;
+  }
+  /* subtle inset ring that stays inside GitHub's circular crop */
+  .ring{
+    position:absolute;inset:44px;border-radius:50%;
+    border:3px solid rgba(255,255,255,0.16);
+  }
+  .glow{
+    position:absolute;inset:0;
+    background:radial-gradient(circle at 70% 80%, rgba(0,0,40,0.35), rgba(0,0,40,0) 60%);
+  }
+  .mono{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    color:#ffffff;font-weight:700;font-size:200px;letter-spacing:8px;
+    text-shadow:0 6px 24px rgba(0,0,0,0.35);
+  }
+  .mono span{transform:translateY(-6px)}
+</style>
+</head>
+<body>
+  <div class="avatar">
+    <div class="glow"></div>
+    <div class="ring"></div>
+    <div class="mono"><span>SKM</span></div>
+  </div>
+</body>
+</html>

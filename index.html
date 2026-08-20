@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Petroleum Engineering Toolkit · PVT &amp; Reservoir Parameters</title>
-<meta name="description" content="Free browser-based calculator for critical petroleum-engineering parameters: PVT fluid properties, gas Z-factor, reservoir volumetrics (OOIP/OGIP) and Arps decline-curve analysis." />
+<meta name="description" content="Free browser-based calculator for critical petroleum-engineering parameters: PVT fluid properties, gas Z-factor, reservoir volumetrics (OOIP/OGIP) and Arps decline-curve analysis for oil and gas wells." />
 <style>
   :root{
     --bg:#0f1419; --panel:#171e26; --panel2:#1e2831; --line:#2b3946;
@@ -22,6 +22,10 @@
   .tab{padding:10px 16px;background:var(--panel);border:1px solid var(--line);border-radius:999px;cursor:pointer;font-size:.9rem;color:var(--muted);transition:.15s}
   .tab:hover{color:var(--text)}
   .tab.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  .seg{display:flex;gap:4px;margin:0 0 14px;background:var(--panel2);padding:4px;border:1px solid var(--line);border-radius:10px}
+  .seg-btn{flex:1;padding:8px 10px;background:transparent;border:0;border-radius:7px;color:var(--muted);font:600 .88rem 'Segoe UI',system-ui,Arial,sans-serif;cursor:pointer;transition:.15s}
+  .seg-btn:hover{color:var(--text)}
+  .seg-btn.active{background:var(--accent);color:#fff}
   .view{display:none}
   .view.active{display:block}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
@@ -57,7 +61,7 @@
 <header>
   <h1>Petroleum Engineering <span>Toolkit</span></h1>
   <p>Fast, transparent estimates of the critical &amp; complex parameters petroleum engineers use every day:
-     PVT fluid properties, gas Z-factor, reservoir volumetrics, and decline-curve analysis. Runs entirely in your browser; nothing is uploaded.</p>
+     PVT fluid properties, gas Z-factor, reservoir volumetrics, and oil and gas decline-curve analysis. Runs entirely in your browser; nothing is uploaded.</p>
 </header>
 
 <div class="wrap">
@@ -166,11 +170,16 @@
     <div class="grid">
       <div class="card">
         <h2>Arps Decline Inputs</h2>
-        <div class="sub">Exponential, hyperbolic &amp; harmonic decline</div>
-        <div class="field"><label><b>Initial rate</b> q<sub>i</sub> (STB/day)</label><input id="d_qi" type="number" step="10" value="800"></div>
+        <div class="sub" id="dec_sub">Exponential, hyperbolic &amp; harmonic decline</div>
+        <div class="seg" id="dec_fluid">
+          <button type="button" class="seg-btn active" data-fluid="oil">Oil well</button>
+          <button type="button" class="seg-btn" data-fluid="gas">Gas well</button>
+        </div>
+        <div class="field"><label><b>Initial rate</b> q<sub>i</sub> (<span class="d_ru">STB/day</span>)</label><input id="d_qi" type="number" step="10" value="800"></div>
         <div class="field"><label><b>Initial decline rate</b> D<sub>i</sub> (nominal, per year)</label><input id="d_di" type="number" step="0.01" value="0.25"></div>
         <div class="field"><label><b>Decline exponent</b> b (0 = exp, 1 = harmonic)</label><input id="d_b" type="number" step="0.05" value="0.5"></div>
-        <div class="field"><label><b>Economic limit rate</b> q<sub>ab</sub> (STB/day)</label><input id="d_qab" type="number" step="1" value="20"></div>
+        <div class="field"><label><b>Terminal decline</b> D<sub>min</sub> (per year, 0 = off)</label><input id="d_dmin" type="number" step="0.01" value="0"></div>
+        <div class="field"><label><b>Economic limit rate</b> q<sub>ab</sub> (<span class="d_ru">STB/day</span>)</label><input id="d_qab" type="number" step="1" value="20"></div>
         <button class="btn" onclick="calcDecline()">Calculate</button>
       </div>
       <div class="card">
@@ -179,12 +188,12 @@
         <div class="results" id="dec_out">
           <div class="res-row"><span class="k">Press Calculate to compute</span><span class="v">—</span></div>
         </div>
-        <div class="note">b = 0 → exponential; 0 &lt; b &lt; 1 → hyperbolic; b = 1 → harmonic. EUR is cumulative production down to the economic limit.</div>
+        <div class="note" id="dec_note">b = 0 → exponential; 0 &lt; b &lt; 1 → hyperbolic; b = 1 → harmonic. EUR is cumulative production down to the economic limit.</div>
       </div>
     </div>
     <div class="card chart-card">
       <h2>Production Forecast</h2>
-      <div class="sub">Rate decline vs time to the economic limit; dashed line = abandonment rate</div>
+      <div class="sub" id="dec_chart_sub">Rate decline vs time to the economic limit; dashed line = abandonment rate</div>
       <canvas id="dec_chart" class="chart"></canvas>
     </div>
   </div>
@@ -206,7 +215,8 @@
         • <code>Dranchuk &amp; Abou-Kassem (1975)</code>: Gas compressibility factor Z (11-constant EOS fit to Standing–Katz).<br>
         • <code>Beggs &amp; Robinson (1975)</code>: Dead- &amp; saturated-oil viscosity.<br>
         • <code>Lee, González &amp; Eakin (1966)</code>: Gas viscosity.<br>
-        • <code>Arps, J.J. (1945)</code>: Decline-curve analysis.<br>
+        • <code>Arps, J.J. (1945)</code>: Decline-curve analysis (exponential, hyperbolic, harmonic).<br>
+        • <code>Robertson, S. (1988)</code>: Modified hyperbolic decline, the terminal-decline switch used for gas wells fit with b &gt; 1.<br>
       </div>
       <div class="note warn" style="margin-top:18px">
         <b>Disclaimer:</b> Provided for educational and screening purposes only, with no warranty. The author accepts no liability
@@ -462,39 +472,110 @@ function calcVol(){
   barChart('vol_chart', bars);
 }
 
-/* ---------- DECLINE (Arps) ---------- */
-function calcDecline(){
-  const qi=num('d_qi'), Di=num('d_di'), b=num('d_b'), qab=num('d_qab');
-  // time to economic limit (years) & cumulative to that point
-  let t, Np, type;
-  const qi_yr = qi*365.25;                            // annualize for Np in STB
-  if(b===0){                                          // exponential
-    type='Exponential';
-    t = Math.log(qi/qab)/Di;
-    Np = (qi_yr - qab*365.25)/Di;
-  }else if(b===1){                                    // harmonic
-    type='Harmonic';
-    t = (qi/qab - 1)/Di;
-    Np = (qi_yr/Di)*Math.log(qi/qab);
-  }else{                                              // hyperbolic
-    type='Hyperbolic (b='+b+')';
-    t = (Math.pow(qi/qab,b) - 1)/(b*Di);
-    Np = (Math.pow(qi,b)/((1-b)*Di))*(Math.pow(qi,1-b)-Math.pow(qab,1-b))*365.25;
+/* ---------- DECLINE (Arps, oil or gas) ---------- */
+const DEC_CFG = {
+  oil:{rate:'STB/day', color:'#39c16c', ylab:'Oil rate (STB/day)',
+       defaults:{qi:800, di:0.25, b:0.5, dmin:0, qab:20},
+       sub:'Exponential, hyperbolic &amp; harmonic decline',
+       note:'b = 0 → exponential; 0 &lt; b &lt; 1 → hyperbolic; b = 1 → harmonic. Conventional oil wells usually fall in b = 0 to 0.5. EUR is cumulative production down to the economic limit.'},
+  gas:{rate:'Mscf/day', color:'#388bfd', ylab:'Gas rate (Mscf/day)',
+       defaults:{qi:3000, di:0.70, b:1.1, dmin:0.08, qab:100},
+       sub:'Arps decline for gas wells, with terminal-decline switch',
+       note:'Unconventional gas wells commonly fit b = 1 to 2 during transient flow, which makes pure Arps overpredict the tail. Set a terminal decline D<sub>min</sub> (typically 5 to 10 %/yr) and the forecast switches from hyperbolic to exponential once the instantaneous decline drops to that value. EUR is cumulative gas down to the economic limit.'}
+};
+let decFluid = 'oil';
+function setDecFluid(f, keepInputs){
+  decFluid = f;
+  const c = DEC_CFG[f];
+  document.querySelectorAll('#dec_fluid .seg-btn').forEach(b=>b.classList.toggle('active', b.dataset.fluid===f));
+  document.querySelectorAll('.d_ru').forEach(e=>e.textContent=c.rate);
+  document.getElementById('dec_sub').innerHTML = c.sub;
+  document.getElementById('dec_note').innerHTML = c.note;
+  document.getElementById('dec_chart_sub').textContent =
+    (f==='gas'?'Gas rate':'Oil rate') + ' decline vs time to the economic limit; dashed line = abandonment rate';
+  if(!keepInputs){
+    const d=c.defaults;
+    document.getElementById('d_qi').value=d.qi;
+    document.getElementById('d_di').value=d.di;
+    document.getElementById('d_b').value=d.b;
+    document.getElementById('d_dmin').value=d.dmin;
+    document.getElementById('d_qab').value=d.qab;
   }
-  let html = row('Decline model', type);
-  html += row('Rate after 1 year', fmt(qi*qFrac(1,Di,b),0), ' STB/day');
-  html += row('Rate after 5 years', fmt(qi*qFrac(5,Di,b),0), ' STB/day');
-  html += row('Time to economic limit', fmt(t,1), ' years');
-  html += row('EUR (cum. to limit)', fmt(Np/1e6,3), ' MMSTB');
-  html += row('EUR (cum. to limit)', fmt(Np,0), ' STB');
-  document.getElementById('dec_out').innerHTML = html;
+  calcDecline();
+}
+document.querySelectorAll('#dec_fluid .seg-btn').forEach(b=>{
+  b.addEventListener('click',()=>setDecFluid(b.dataset.fluid,false));
+});
+
+function qFrac(t,Di,b){                               // q(t)/qi, pure Arps
+  if(b<=0) return Math.exp(-Di*t);
+  return Math.pow(1+b*Di*t, -1/b);
+}
+/* cumulative volume (rate-units x days) declining from q1 to q2 under Arps */
+function decCum(q1,q2,D1,b){
+  if(b<=0)  return 365.25*(q1-q2)/D1;
+  if(b===1) return 365.25*(q1/D1)*Math.log(q1/q2);
+  return 365.25*(Math.pow(q1,b)/((1-b)*D1))*(Math.pow(q1,1-b)-Math.pow(q2,1-b));
+}
+/* modified Arps: hyperbolic until the instantaneous decline falls to Dmin, exponential after */
+function decSolve(qi,Di,b,qab,Dmin){
+  b = Math.max(0,b);
+  const terminal = (Dmin>0 && Dmin<Di && b>0);
+  let tSw=null, qSw=null;
+  if(terminal){
+    tSw = (Di/Dmin - 1)/(b*Di);
+    qSw = qi*qFrac(tSw,Di,b);
+    if(qSw<=qab){ tSw=null; qSw=null; }             // economic limit reached before the switch
+  }
+  let t, Np;
+  if(tSw!==null){
+    t  = tSw + Math.log(qSw/qab)/Dmin;
+    Np = decCum(qi,qSw,Di,b) + 365.25*(qSw-qab)/Dmin;
+  }else{
+    if(b<=0)       t = Math.log(qi/qab)/Di;
+    else if(b===1) t = (qi/qab - 1)/Di;
+    else           t = (Math.pow(qi/qab,b) - 1)/(b*Di);
+    Np = decCum(qi,qab,Di,b);
+  }
+  const type = b<=0 ? 'Exponential' : (b===1 ? 'Harmonic' : 'Hyperbolic (b='+b+')');
+  return {t, Np, tSw, qSw, type: type + (tSw!==null ? ' + terminal exponential' : '')};
+}
+function decRate(t,qi,Di,b,tSw,qSw,Dmin){
+  if(tSw!==null && t>tSw) return qSw*Math.exp(-Dmin*(t-tSw));
+  return qi*qFrac(t,Di,b);
+}
+function calcDecline(){
+  const qi=num('d_qi'), Di=num('d_di'), b=num('d_b'), qab=num('d_qab'), Dmin=num('d_dmin')||0;
+  const cfg=DEC_CFG[decFluid], gas=(decFluid==='gas');
+  const out=document.getElementById('dec_out');
+  if(!(qi>0)||!(Di>0)||!(qab>0)||qab>=qi||b<0){
+    out.innerHTML = row('Check inputs','q<sub>i</sub> &gt; q<sub>ab</sub> &gt; 0, D<sub>i</sub> &gt; 0, b ≥ 0');
+    return;
+  }
+  const r = decSolve(qi,Di,b,qab,Dmin);
+  let html = row('Decline model', r.type);
+  html += row('Rate after 1 year',  fmt(decRate(1,qi,Di,b,r.tSw,r.qSw,Dmin),0), ' '+cfg.rate);
+  html += row('Rate after 5 years', fmt(decRate(5,qi,Di,b,r.tSw,r.qSw,Dmin),0), ' '+cfg.rate);
+  if(r.tSw!==null){
+    html += row('Switch to exponential at', fmt(r.tSw,1), ' years');
+    html += row('Rate at switch', fmt(r.qSw,0), ' '+cfg.rate);
+  }
+  html += row('Time to economic limit', fmt(r.t,1), ' years');
+  if(gas){
+    html += row('EUR (cum. to limit)', fmt(r.Np/1e6,3), ' Bcf');
+    html += row('EUR (cum. to limit)', fmt(r.Np/1e3,1), ' MMscf');
+  }else{
+    html += row('EUR (cum. to limit)', fmt(r.Np/1e6,3), ' MMSTB');
+    html += row('EUR (cum. to limit)', fmt(r.Np,0), ' STB');
+  }
+  out.innerHTML = html;
 
   // chart: rate vs time to economic limit
-  const qPts=[]; const tEnd=Math.max(t,0.5);
-  for(let i=0;i<=60;i++){ const ti=i*tEnd/60; qPts.push([ti, qi*qFrac(ti,Di,b)]); }
+  const qPts=[]; const tEnd=Math.max(r.t,0.5);
+  for(let i=0;i<=120;i++){ const ti=i*tEnd/120; qPts.push([ti, decRate(ti,qi,Di,b,r.tSw,r.qSw,Dmin)]); }
   lineChart('dec_chart',
-    [{name:'Rate',color:'#39c16c',pts:qPts}],
-    'Time (years)','Oil rate (STB/day)');
+    [{name:'Rate',color:cfg.color,pts:qPts}],
+    'Time (years)', cfg.ylab);
   // abandonment line
   const cv=document.getElementById('dec_chart'); if(cv){const ctx=cv.getContext('2d');
     const w=cv.clientWidth,h=cv.clientHeight,padL=64,padR=64,padB=46,padT=16;
@@ -502,14 +583,10 @@ function calcDecline(){
     ctx.strokeStyle='#d29922';ctx.setLineDash([6,4]);ctx.lineWidth=1.5;
     ctx.beginPath();ctx.moveTo(padL,y);ctx.lineTo(w-padR,y);ctx.stroke();ctx.setLineDash([]);}
 }
-function qFrac(t,Di,b){                               // q(t)/qi
-  if(b===0) return Math.exp(-Di*t);
-  return Math.pow(1+b*Di*t, -1/b);
-}
 
 /* init */
 document.getElementById('repoLink').href = 'https://github.com/Kouroshie/petroleum-toolkit';
-calcOil(); calcGas(); calcVol(); calcDecline();
+calcOil(); calcGas(); calcVol(); setDecFluid('oil', true);
 </script>
 </body>
 </html>
