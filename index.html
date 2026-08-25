@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Petroleum Engineering Toolkit · PVT &amp; Reservoir Parameters</title>
-<meta name="description" content="Free browser-based calculator for critical petroleum-engineering parameters: PVT fluid properties, gas Z-factor, reservoir volumetrics (OOIP/OGIP) and Arps decline-curve analysis for oil and gas wells." />
+<meta name="description" content="Free browser-based calculator for critical petroleum-engineering parameters: PVT fluid properties, gas Z-factor, reservoir volumetrics (OOIP/OGIP), Arps decline-curve analysis and surface-choke performance for oil and gas wells." />
 <style>
   :root{
     --bg:#0f1419; --panel:#171e26; --panel2:#1e2831; --line:#2b3946;
@@ -61,7 +61,7 @@
 <header>
   <h1>Petroleum Engineering <span>Toolkit</span></h1>
   <p>Fast, transparent estimates of the critical &amp; complex parameters petroleum engineers use every day:
-     PVT fluid properties, gas Z-factor, reservoir volumetrics, and oil and gas decline-curve analysis. Runs entirely in your browser; nothing is uploaded.</p>
+     PVT fluid properties, gas Z-factor, reservoir volumetrics, oil and gas decline-curve analysis, and surface-choke performance. Runs entirely in your browser; nothing is uploaded.</p>
 </header>
 
 <div class="wrap">
@@ -70,6 +70,7 @@
     <div class="tab" data-view="gas">Gas Properties</div>
     <div class="tab" data-view="vol">Volumetrics (OOIP / OGIP)</div>
     <div class="tab" data-view="decline">Decline Curve</div>
+    <div class="tab" data-view="choke">Choke Performance</div>
     <div class="tab" data-view="about">About</div>
   </div>
 
@@ -198,6 +199,48 @@
     </div>
   </div>
 
+  <!-- ============ CHOKE ============ -->
+  <div class="view" id="choke">
+    <div class="grid">
+      <div class="card">
+        <h2>Surface Choke Inputs</h2>
+        <div class="sub">Gilbert-type critical-flow correlations: P<sub>wh</sub> = A&middot;q<sub>L</sub>&middot;R<sup>B</sup> / S<sup>C</sup></div>
+        <div class="seg" id="ck_solve">
+          <button type="button" class="seg-btn active" data-solve="q">Solve rate</button>
+          <button type="button" class="seg-btn" data-solve="p">Solve P<sub>wh</sub></button>
+          <button type="button" class="seg-btn" data-solve="s">Solve choke</button>
+        </div>
+        <div class="field"><label><b>Correlation</b></label>
+          <select id="ck_corr">
+            <option value="gilbert">Gilbert (1954)</option>
+            <option value="ros">Ros (1960)</option>
+            <option value="baxendell">Baxendell (1957)</option>
+            <option value="achong">Achong (1961)</option>
+          </select>
+        </div>
+        <div class="field" id="ck_p_wrap"><label><b>Wellhead (upstream) pressure</b> P<sub>wh</sub> (psig)</label><input id="ck_p" type="number" step="10" value="900"></div>
+        <div class="field" id="ck_q_wrap"><label><b>Gross liquid rate</b> q<sub>L</sub> (STB/day)</label><input id="ck_q" type="number" step="10" value="950"></div>
+        <div class="field" id="ck_s_wrap"><label><b>Choke bean size</b> S (64ths of an inch)</label><input id="ck_s" type="number" step="1" value="24"></div>
+        <div class="field"><label><b>Producing gas/liquid ratio</b> R (scf/STB)</label><input id="ck_glr" type="number" step="50" value="800"></div>
+        <div class="field"><label><b>Flowline (downstream) pressure</b> P<sub>dn</sub> (psig, for the critical-flow check)</label><input id="ck_pdn" type="number" step="10" value="150"></div>
+        <button class="btn" onclick="calcChoke()">Calculate</button>
+      </div>
+      <div class="card">
+        <h2>Results</h2>
+        <div class="sub" id="ck_res_sub">Critical (sonic) flow through a surface bean choke</div>
+        <div class="results" id="ck_out">
+          <div class="res-row"><span class="k">Press Calculate to compute</span><span class="v">&mdash;</span></div>
+        </div>
+        <div class="note" id="ck_note">Valid only in <b>critical flow</b>, where the bean is choked and the rate no longer responds to downstream pressure. Constants here are stated for R in scf/STB; texts that write R in Mscf/STB scale the coefficient by 1000<sup>B</sup> (Gilbert: 435).</div>
+      </div>
+    </div>
+    <div class="card chart-card">
+      <h2>Choke Performance Curve</h2>
+      <div class="sub" id="ck_chart_sub">Liquid rate vs bean size, all four correlations; &#9679; marks your operating point</div>
+      <canvas id="ck_chart" class="chart"></canvas>
+    </div>
+  </div>
+
   <!-- ============ ABOUT ============ -->
   <div class="view" id="about">
     <div class="card">
@@ -216,6 +259,8 @@
         • <code>Beggs &amp; Robinson (1975)</code>: Dead- &amp; saturated-oil viscosity.<br>
         • <code>Lee, González &amp; Eakin (1966)</code>: Gas viscosity.<br>
         • <code>Arps, J.J. (1945)</code>: Decline-curve analysis (exponential, hyperbolic, harmonic).<br>
+        • <code>Gilbert, W.E. (1954)</code>: Critical-flow surface choke correlation, P<sub>wh</sub> = 10&middot;q<sub>L</sub>&middot;R<sup>0.546</sup>/S<sup>1.89</sup>.<br>
+        • <code>Ros (1960)</code>, <code>Baxendell (1957)</code>, <code>Achong (1961)</code>: Same choke form, refitted constants A, B, C.<br>
         • <code>Robertson, S. (1988)</code>: Modified hyperbolic decline, the terminal-decline switch used for gas wells fit with b &gt; 1.<br>
       </div>
       <div class="note warn" style="margin-top:18px">
@@ -245,14 +290,14 @@ document.querySelectorAll('.tab').forEach(t=>{
     t.classList.add('active');
     document.getElementById(t.dataset.view).classList.add('active');
     // redraw the chart now that the canvas has real dimensions
-    const redraw={oil:calcOil,gas:calcGas,vol:calcVol,decline:calcDecline}[t.dataset.view];
+    const redraw={oil:calcOil,gas:calcGas,vol:calcVol,decline:calcDecline,choke:calcChoke}[t.dataset.view];
     if(redraw) redraw();
   });
 });
 window.addEventListener('resize',()=>{
   const active=document.querySelector('.view.active');
   if(!active)return;
-  ({oil:calcOil,gas:calcGas,vol:calcVol,decline:calcDecline}[active.id]||(()=>{}))();
+  ({oil:calcOil,gas:calcGas,vol:calcVol,decline:calcDecline,choke:calcChoke}[active.id]||(()=>{}))();
 });
 
 /* ---------- helpers ---------- */
@@ -271,15 +316,16 @@ function prep(canvas){
   return {ctx,w,h};
 }
 function niceMax(v){ if(v<=0)return 1; const p=Math.pow(10,Math.floor(Math.log10(v))); const f=v/p; return (f<=1?1:f<=2?2:f<=5?5:10)*p; }
-function lineChart(canvasId, series, xlabel, ylabel, marker){
+function lineChart(canvasId, series, xlabel, ylabel, marker, opts){
   const canvas=document.getElementById(canvasId); if(!canvas)return;
   const {ctx,w,h}=prep(canvas);
   const padL=64,padR=64,padT=16,padB=46;
   let xmin=Infinity,xmax=-Infinity,ymin=Infinity,ymax=-Infinity;
   // primary axis from series[0]; optional secondary axis series[1]
   series.forEach(s=>s.pts.forEach(([x,y])=>{if(x<xmin)xmin=x;if(x>xmax)xmax=x;}));
-  const y0=series[0].pts, y1=series[1]?series[1].pts:null;
-  y0.forEach(([,y])=>{if(y<ymin)ymin=y;if(y>ymax)ymax=y;});
+  const shared = !!(opts && opts.shared);            // all series on one axis (no right-hand scale)
+  const y0=series[0].pts, y1=(!shared && series[1])?series[1].pts:null;
+  (shared?series:[series[0]]).forEach(s=>s.pts.forEach(([,y])=>{if(y<ymin)ymin=y;if(y>ymax)ymax=y;}));
   let ymin2=Infinity,ymax2=-Infinity;
   if(y1) y1.forEach(([,y])=>{if(y<ymin2)ymin2=y;if(y>ymax2)ymax2=y;});
   ymin=Math.min(0,ymin); ymax=niceMax(ymax);
@@ -308,11 +354,20 @@ function lineChart(canvasId, series, xlabel, ylabel, marker){
   if(y1){ctx.save();ctx.translate(w-14,(padT+h-padB)/2);ctx.rotate(-Math.PI/2);ctx.fillStyle=series[1].color;ctx.fillText(series[1].name,0,0);ctx.restore();}
   // series
   series.forEach((s,idx)=>{
-    const map=idx===1?sy2:sy;
+    const map=(!shared && idx===1)?sy2:sy;
     ctx.strokeStyle=s.color;ctx.lineWidth=2.5;ctx.beginPath();
     s.pts.forEach(([x,y],i)=>{const px=sx(x),py=map(y);i?ctx.lineTo(px,py):ctx.moveTo(px,py);});
     ctx.stroke();
   });
+  // legend (shared-axis charts only)
+  if(shared){
+    ctx.font='11px Segoe UI';ctx.textAlign='left';
+    series.forEach((s,i)=>{
+      const lx=padL+14, ly=padT+16+i*15;
+      ctx.strokeStyle=s.color;ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(lx,ly-4);ctx.lineTo(lx+18,ly-4);ctx.stroke();
+      ctx.fillStyle='#8b98a5';ctx.fillText(s.name,lx+24,ly);
+    });
+  }
   // marker point
   if(marker){ctx.fillStyle='#f0f6fc';ctx.strokeStyle=marker.color||'#f0f6fc';ctx.lineWidth=2;
     const px=sx(marker.x),py=sy(marker.y);ctx.beginPath();ctx.arc(px,py,5,0,2*Math.PI);ctx.fill();ctx.stroke();}
@@ -584,9 +639,102 @@ function calcDecline(){
     ctx.beginPath();ctx.moveTo(padL,y);ctx.lineTo(w-padR,y);ctx.stroke();ctx.setLineDash([]);}
 }
 
+/* ---------- CHOKE (Gilbert-type critical-flow correlations) ---------- */
+/* P_wh = A * qL * R^B / S^C ; P psig, qL STB/day, R scf/STB, S in 64ths of an inch */
+const CK_CORR = {
+  gilbert:  {name:'Gilbert',   year:1954, A:10.00, B:0.546, C:1.89, color:'#39c16c'},
+  ros:      {name:'Ros',       year:1960, A:17.40, B:0.500, C:2.00, color:'#388bfd'},
+  baxendell:{name:'Baxendell', year:1957, A:9.56,  B:0.546, C:1.93, color:'#d29922'},
+  achong:   {name:'Achong',    year:1961, A:3.82,  B:0.650, C:1.88, color:'#c678dd'}
+};
+const ckP = (c,q,R,S) => c.A*q*Math.pow(R,c.B)/Math.pow(S,c.C);
+const ckQ = (c,P,R,S) => P*Math.pow(S,c.C)/(c.A*Math.pow(R,c.B));
+const ckS = (c,P,q,R) => Math.pow(c.A*q*Math.pow(R,c.B)/P, 1/c.C);
+
+let ckSolve = 'q';
+function setCkSolve(mode){
+  ckSolve = mode;
+  document.querySelectorAll('#ck_solve .seg-btn').forEach(b=>b.classList.toggle('active', b.dataset.solve===mode));
+  document.getElementById('ck_p_wrap').style.display = mode==='p'?'none':'block';
+  document.getElementById('ck_q_wrap').style.display = mode==='q'?'none':'block';
+  document.getElementById('ck_s_wrap').style.display = mode==='s'?'none':'block';
+  document.getElementById('ck_res_sub').textContent =
+    {q:'Liquid rate the bean will pass in critical flow',
+     p:'Wellhead pressure required upstream of the bean',
+     s:'Bean size needed to pass the given rate'}[mode];
+  calcChoke();
+}
+document.querySelectorAll('#ck_solve .seg-btn').forEach(b=>{
+  b.addEventListener('click',()=>setCkSolve(b.dataset.solve));
+});
+document.getElementById('ck_corr').addEventListener('change',calcChoke);
+
+function calcChoke(){
+  const c = CK_CORR[document.getElementById('ck_corr').value];
+  const R = num('ck_glr'), Pdn = num('ck_pdn');
+  const out = document.getElementById('ck_out');
+  let P = num('ck_p'), q = num('ck_q'), S = num('ck_s');
+
+  const need = {q:[P,S], p:[q,S], s:[P,q]}[ckSolve];
+  if(!(R>0) || need.some(v=>!(v>0))){
+    out.innerHTML = row('Check inputs','all values must be greater than zero');
+    return;
+  }
+  if(ckSolve==='q')      q = ckQ(c,P,R,S);
+  else if(ckSolve==='p') P = ckP(c,q,R,S);
+  else                   S = ckS(c,P,q,R);
+
+  const d_in = S/64, area = Math.PI/4*d_in*d_in;
+  const ratio = (Pdn>0) ? (Pdn+14.7)/(P+14.7) : null;
+
+  const solved = {q:['Liquid rate q<sub>L</sub>', fmt(q,0), ' STB/day'],
+                  p:['Wellhead pressure P<sub>wh</sub>', fmt(P,0), ' psig'],
+                  s:['Choke size S', fmt(S,1), ' /64 in']}[ckSolve];
+  let html = row('Correlation', c.name+' ('+c.year+')');
+  html += row('<b style="color:var(--text)">'+solved[0]+'</b>', solved[1], solved[2]);
+  html += row('Choke diameter', fmt(d_in,4)+' in / '+fmt(d_in*25.4,2)+' mm');
+  html += row('Choke flow area', fmt(area,4), ' in&sup2;');
+  html += row('Gas rate q<sub>g</sub> = q<sub>L</sub>&middot;R', fmt(q*R/1000,0), ' Mscf/day');
+  if(ratio!==null) html += row('Pressure ratio P<sub>dn</sub>/P<sub>wh</sub> (abs)', fmt(ratio,3));
+
+  html += `<div class="res-row"><span class="k" style="color:var(--text);font-weight:600">Other correlations</span><span class="v"></span></div>`;
+  Object.keys(CK_CORR).filter(k=>CK_CORR[k]!==c).forEach(k=>{
+    const o = CK_CORR[k];
+    const v = ckSolve==='q' ? fmt(ckQ(o,P,R,S),0)+' STB/day'
+            : ckSolve==='p' ? fmt(ckP(o,q,R,S),0)+' psig'
+            :                 fmt(ckS(o,P,q,R),1)+' /64 in';
+    html += row(o.name, v);
+  });
+
+  if(ratio!==null && ratio>0.70){
+    html += `<div class="note warn">&#9888; P<sub>dn</sub>/P<sub>wh</sub> = ${fmt(ratio,2)} &gt; 0.70, so the bean is almost certainly in <b>sub-critical</b> flow. Rate then depends on downstream pressure and these correlations do not apply. Use a sub-critical choke model instead.</div>`;
+  }else if(ratio!==null && ratio>0.55){
+    html += `<div class="note warn">&#9888; P<sub>dn</sub>/P<sub>wh</sub> = ${fmt(ratio,2)} sits in the transition band. Sonic flow is usually assumed below about 0.55, and Gilbert's practical rule is 0.70; treat this point as borderline.</div>`;
+  }
+  const flags=[];
+  if(S<4||S>64) flags.push('bean size '+fmt(S,1)+'/64 in');
+  if(R<50||R>5000) flags.push('GLR '+fmt(R,0)+' scf/STB');
+  if(flags.length){
+    html += `<div class="note warn">&#9888; ${flags.join(' and ')} falls outside the range these field-fitted correlations are normally applied over. Extrapolate with care.</div>`;
+  }
+  out.innerHTML = html;
+
+  // chart: liquid rate vs bean size at this P and R, one curve per correlation
+  const series = Object.keys(CK_CORR).map(k=>{
+    const o=CK_CORR[k], pts=[];
+    for(let s=6;s<=64;s+=0.5) pts.push([s, ckQ(o,P,R,s)]);
+    return {name:o.name, color:o.color, pts:pts};
+  });
+  lineChart('ck_chart', series, 'Bean size S (64ths of an inch)', 'Liquid rate (STB/day)',
+            {x:S, y:q, color:c.color}, {shared:true});
+  document.getElementById('ck_chart_sub').innerHTML =
+    'Liquid rate vs bean size at P<sub>wh</sub> = '+fmt(P,0)+' psig and R = '+fmt(R,0)+
+    ' scf/STB, all four correlations; &#9679; marks your operating point';
+}
+
 /* init */
 document.getElementById('repoLink').href = 'https://github.com/Kouroshie/petroleum-toolkit';
-calcOil(); calcGas(); calcVol(); setDecFluid('oil', true);
+calcOil(); calcGas(); calcVol(); setDecFluid('oil', true); setCkSolve('q');
 </script>
 </body>
 </html>
